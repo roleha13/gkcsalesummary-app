@@ -151,7 +151,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     stacked.title = 'Daily Gaming Mix'
     dashboard.add_chart(stacked, 'N2')
 
-    file_name = f"{month_number:02d}. SALES ANALYSIS {month_name} {year_full}.xlsx"
+    file_name = f"{month_number}. SALES ANALYSIS {month_name} {year_full}.xlsx"
     output_path = os.path.join(output_folder, file_name)
     wb.save(output_path)
 
