@@ -94,11 +94,18 @@ def process_pdfs_to_excel(pdf_files, output_folder):
             ws.cell(row=i, column=col, value=row[key]).number_format = MONEY_FMT
 
         ws[f'G{i}'] = f'=SUM(B{i}:F{i})'
+        ws[f'G{i}'].number_format = MONEY_FMT
+
         ws[f'H{i}'].number_format = MONEY_FMT
+
         ws[f'I{i}'] = f'=G{i}+H{i}'
+        ws[f'I{i}'].number_format = MONEY_FMT
+
         ws[f'J{i}'].number_format = MONEY_FMT
         ws[f'K{i}'].number_format = MONEY_FMT
+
         ws[f'L{i}'] = f'=I{i}+J{i}+K{i}'
+        ws[f'L{i}'].number_format = MONEY_FMT
 
     total_row = start_row + len(rows)
     ws[f'A{total_row}'] = 'TOTAL'
