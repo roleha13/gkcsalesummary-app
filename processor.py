@@ -1,3 +1,4 @@
+# processor.py
 import os
 import re
 import calendar
@@ -10,7 +11,6 @@ from openpyxl.chart import LineChart, PieChart, BarChart, Reference
 from openpyxl.chart.label import DataLabelList
 from openpyxl.chart.series import DataPoint
 from openpyxl.chart.shapes import GraphicalProperties
-
 
 MONEY_FMT = '#,##0.00;(#,##0.00)'
 YELLOW_FILL = PatternFill(start_color="FFFFF2CC", end_color="FFFFF2CC", fill_type="solid")
@@ -85,7 +85,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     ws['A3'] = month_abbrev_year
     ws['A3'].fill = YELLOW_FILL
     ws['A3'].alignment = Alignment(horizontal='center')
-    
+
     ws.append(headers)
 
     start_row = 5
@@ -121,138 +121,102 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
     dashboard = wb.create_sheet('Dashboard')
 
+    # ===== EXECUTIVE DASHBOARD STYLING =====
+    dashboard.sheet_view.showGridLines = False
+    dashboard['A1'] = 'GOLDEN KEY CASINO – EXECUTIVE DASHBOARD'
+    dashboard['A1'].font = Font(bold=True, size=16)
+    dashboard.merge_cells('A1:H1')
+    dashboard['A1'].alignment = Alignment(horizontal='center')
+    dashboard['A1'].fill = PatternFill('solid', fgColor='1F4E78')
+    dashboard['A1'].font = Font(color='FFFFFF', bold=True, size=16)
+
     metrics = ['TABLE AR','TABLE CARDS','SLOTS AC+CT','SLOTS EG+AM+NOV','SLOTS TBJ']
-    dashboard['A1'] = 'Gaming Results Summary'
+    dashboard['A3'] = 'Gaming Results Summary'
+    dashboard['A3'].font = Font(bold=True, size=12)
 
-    for idx, metric in enumerate(metrics, start=2):
+    for idx, metric in enumerate(metrics, start=4):
         dashboard[f'A{idx}'] = metric
-        dashboard[f'B{idx}'] = f"='Sales Summary'!{get_column_letter(idx)}{total_row}"
+        dashboard[f'B{idx}'] = f"='Sales Summary'!{get_column_letter(idx-2)}{total_row}"
+        dashboard[f'B{idx}'].number_format = MONEY_FMT
 
-    dashboard['A7'] = 'TOTAL WINNINGS'
-    dashboard['B7'] = f"='Sales Summary'!G{total_row}"
+    dashboard['A9'] = 'TOTAL WINNINGS'
+    dashboard['B9'] = f"='Sales Summary'!G{total_row}"
+    dashboard['B9'].number_format = MONEY_FMT
 
-    for idx in range(2, 8):
-        dashboard[f'C{idx}'] = f'=B{idx}/$B$7'
+    for idx in range(4, 9):
+        dashboard[f'C{idx}'] = f'=B{idx}/$B$9'
         dashboard[f'C{idx}'].number_format = '0%'
 
-    # =========================
-    # PIE CHART
-    # =========================
+    # ===== PIE CHART =====
     pie = PieChart()
-
-    data = Reference(dashboard, min_col=2, min_row=2, max_row=6)
-    labels = Reference(dashboard, min_col=1, min_row=2, max_row=6)
-
-    pie.add_data(data)
-    pie.set_categories(labels)
-
-    pie.title = "Gaming Results Summary"
-
-    # Data labels (percentages)
+    pie.add_data(Reference(dashboard, min_col=2, min_row=4, max_row=8))
+    pie.set_categories(Reference(dashboard, min_col=1, min_row=4, max_row=8))
+    pie.title = 'Gaming Results Summary'
+    pie.style = 10
+    pie.height = 7
+    pie.width = 9
+    pie.legend.position = 'r'
     pie.dataLabels = DataLabelList()
     pie.dataLabels.showPercent = True
     pie.dataLabels.showLeaderLines = True
 
-    # Slice Colors
-    slice_colors = ["4F81BD", "C0504D", "9BBB59", "8064A2", "F79646"]
-
+    slice_colors = ['4F81BD','C0504D','9BBB59','8064A2','F79646']
     for i, color in enumerate(slice_colors):
         pt = DataPoint(idx=i)
-        pt.graphicalProperties = GraphicalProperties(
-            solidFill=color
-        )
+        pt.graphicalProperties = GraphicalProperties(solidFill=color)
         pie.series[0].data_points.append(pt)
 
-    pie.legend.position = "r"
+    dashboard.add_chart(pie, 'E3')
 
-    dashboard.add_chart(pie, "E2")
-
-
-    # =========================
-    # MONTHLY TOTAL WINNINGS LINE CHART
-    # =========================
-    line = LineChart()
-
-    line_data = Reference(ws, min_col=7, min_row=4, max_row=total_row-1)
+    # ===== TOTAL WINNINGS LINE =====
     line_dates = Reference(ws, min_col=1, min_row=5, max_row=total_row-1)
 
-    line.add_data(line_data, titles_from_data=True)
+    line = LineChart()
+    line.add_data(Reference(ws, min_col=7, min_row=4, max_row=total_row-1), titles_from_data=True)
     line.set_categories(line_dates)
-
-    line.title = "Monthly Total Winnings"
-    line.style = 2
-    line.marker = "circle"
-
-    line.x_axis.title = "Day of Month"
-    line.y_axis.title = "Amount"
-
-    line.legend.position = "r"
-
-    line.width = 12
+    line.title = 'Monthly Total Winnings'
+    line.style = 13
+    line.marker = 'circle'
+    line.x_axis.title = 'Day of Month'
+    line.y_axis.title = 'Amount'
+    line.legend.position = 'r'
+    line.width = 13
     line.height = 6
+    dashboard.add_chart(line, 'E20')
 
-    dashboard.add_chart(line, "E18")
-
-
-    # =========================
-    # MONTHLY TIPS LINE CHART
-    # =========================
+    # ===== TIPS LINE =====
     tips = LineChart()
-
-    tips_data = Reference(ws, min_col=8, min_row=4, max_row=total_row-1)
-
-    tips.add_data(tips_data, titles_from_data=True)
+    tips.add_data(Reference(ws, min_col=8, min_row=4, max_row=total_row-1), titles_from_data=True)
     tips.set_categories(line_dates)
-
-    tips.title = "Monthly Tips"
-    tips.style = 2
-    tips.marker = "circle"
-
-    tips.x_axis.title = "Day of Month"
-    tips.y_axis.title = "Amount"
-
-    tips.legend.position = "r"
-
-    tips.width = 12
+    tips.title = 'Monthly Tips'
+    tips.style = 13
+    tips.marker = 'circle'
+    tips.x_axis.title = 'Day of Month'
+    tips.y_axis.title = 'Amount'
+    tips.legend.position = 'r'
+    tips.width = 13
     tips.height = 6
+    dashboard.add_chart(tips, 'E37')
 
-    dashboard.add_chart(tips, "E34")
-
-
-    # =========================
-    # STACKED COLUMN CHART
-    # =========================
+    # ===== STACKED DAILY MIX =====
     stacked = BarChart()
-
-    stacked.type = "col"
-    stacked.grouping = "stacked"
+    stacked.type = 'col'
+    stacked.grouping = 'stacked'
     stacked.overlap = 100
-
-    stacked_data = Reference(
-        ws,
-        min_col=2,
-        max_col=6,
-        min_row=4,
-        max_row=total_row-1
-    )
-
-    stacked.add_data(stacked_data, titles_from_data=True)
+    stacked.add_data(Reference(ws, min_col=2, max_col=6, min_row=4, max_row=total_row-1), titles_from_data=True)
     stacked.set_categories(line_dates)
-
-    stacked.title = "Daily Gaming Mix"
-
-    stacked.x_axis.title = "Day of Month"
-    stacked.y_axis.title = "Amount"
-
-    stacked.legend.position = "r"
-
-    stacked.width = 14
+    stacked.title = 'Daily Gaming Mix'
+    stacked.style = 12
+    stacked.x_axis.title = 'Day of Month'
+    stacked.y_axis.title = 'Amount'
+    stacked.legend.position = 'r'
+    stacked.width = 15
     stacked.height = 8
+    dashboard.add_chart(stacked, 'N3')
 
-    dashboard.add_chart(stacked, "N2")
-
-    file_name = f"{month_number}. SALES ANALYSIS {month_name} {year_full}.xlsx"
+    file_name = f"{month_number:02d}. SALES ANALYSIS {month_name} {year_full}.xlsx"
     output_path = os.path.join(output_folder, file_name)
     wb.save(output_path)
 
     return output_path
+
