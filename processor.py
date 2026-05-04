@@ -7,6 +7,10 @@ from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Alignment, PatternFill, Font
 from openpyxl.chart import LineChart, PieChart, BarChart, Reference
+from openpyxl.chart.label import DataLabelList
+from openpyxl.chart.series import DataPoint
+from openpyxl.chart.shapes import GraphicalProperties
+
 
 MONEY_FMT = '#,##0.00;(#,##0.00)'
 YELLOW_FILL = PatternFill(start_color="FFFFF2CC", end_color="FFFFF2CC", fill_type="solid")
@@ -131,32 +135,121 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         dashboard[f'C{idx}'] = f'=B{idx}/$B$7'
         dashboard[f'C{idx}'].number_format = '0%'
 
+    # =========================
+    # PIE CHART
+    # =========================
     pie = PieChart()
-    pie.add_data(Reference(dashboard, min_col=2, min_row=2, max_row=6))
-    pie.set_categories(Reference(dashboard, min_col=1, min_row=2, max_row=6))
-    pie.title = 'Gaming Results Summary'
-    dashboard.add_chart(pie, 'E2')
 
+    data = Reference(dashboard, min_col=2, min_row=2, max_row=6)
+    labels = Reference(dashboard, min_col=1, min_row=2, max_row=6)
+
+    pie.add_data(data)
+    pie.set_categories(labels)
+
+    pie.title = "Gaming Results Summary"
+
+    # Data labels (percentages)
+    pie.dataLabels = DataLabelList()
+    pie.dataLabels.showPercent = True
+    pie.dataLabels.showLeaderLines = True
+
+    # Slice Colors
+    slice_colors = ["4F81BD", "C0504D", "9BBB59", "8064A2", "F79646"]
+
+    for i, color in enumerate(slice_colors):
+        pt = DataPoint(idx=i)
+        pt.graphicalProperties = GraphicalProperties(
+            solidFill=color
+        )
+        pie.series[0].data_points.append(pt)
+
+    pie.legend.position = "r"
+
+    dashboard.add_chart(pie, "E2")
+
+
+    # =========================
+    # MONTHLY TOTAL WINNINGS LINE CHART
+    # =========================
     line = LineChart()
-    line.add_data(Reference(ws, min_col=7, min_row=4, max_row=total_row-1), titles_from_data=True)
-    line.set_categories(Reference(ws, min_col=1, min_row=5, max_row=total_row-1))
-    line.title = 'Monthly Total Winnings'
-    dashboard.add_chart(line, 'E18')
 
+    line_data = Reference(ws, min_col=7, min_row=4, max_row=total_row-1)
+    line_dates = Reference(ws, min_col=1, min_row=5, max_row=total_row-1)
+
+    line.add_data(line_data, titles_from_data=True)
+    line.set_categories(line_dates)
+
+    line.title = "Monthly Total Winnings"
+    line.style = 2
+    line.marker = "circle"
+
+    line.x_axis.title = "Day of Month"
+    line.y_axis.title = "Amount"
+
+    line.legend.position = "r"
+
+    line.width = 12
+    line.height = 6
+
+    dashboard.add_chart(line, "E18")
+
+
+    # =========================
+    # MONTHLY TIPS LINE CHART
+    # =========================
     tips = LineChart()
-    tips.add_data(Reference(ws, min_col=8, min_row=4, max_row=total_row-1), titles_from_data=True)
-    tips.set_categories(Reference(ws, min_col=1, min_row=5, max_row=total_row-1))
-    tips.title = 'Monthly Tips'
-    dashboard.add_chart(tips, 'E34')
 
+    tips_data = Reference(ws, min_col=8, min_row=4, max_row=total_row-1)
+
+    tips.add_data(tips_data, titles_from_data=True)
+    tips.set_categories(line_dates)
+
+    tips.title = "Monthly Tips"
+    tips.style = 2
+    tips.marker = "circle"
+
+    tips.x_axis.title = "Day of Month"
+    tips.y_axis.title = "Amount"
+
+    tips.legend.position = "r"
+
+    tips.width = 12
+    tips.height = 6
+
+    dashboard.add_chart(tips, "E34")
+
+
+    # =========================
+    # STACKED COLUMN CHART
+    # =========================
     stacked = BarChart()
-    stacked.type = 'col'
-    stacked.grouping = 'stacked'
+
+    stacked.type = "col"
+    stacked.grouping = "stacked"
     stacked.overlap = 100
-    stacked.add_data(Reference(ws, min_col=2, max_col=6, min_row=4, max_row=total_row-1), titles_from_data=True)
-    stacked.set_categories(Reference(ws, min_col=1, min_row=5, max_row=total_row-1))
-    stacked.title = 'Daily Gaming Mix'
-    dashboard.add_chart(stacked, 'N2')
+
+    stacked_data = Reference(
+        ws,
+        min_col=2,
+        max_col=6,
+        min_row=4,
+        max_row=total_row-1
+    )
+
+    stacked.add_data(stacked_data, titles_from_data=True)
+    stacked.set_categories(line_dates)
+
+    stacked.title = "Daily Gaming Mix"
+
+    stacked.x_axis.title = "Day of Month"
+    stacked.y_axis.title = "Amount"
+
+    stacked.legend.position = "r"
+
+    stacked.width = 14
+    stacked.height = 8
+
+    dashboard.add_chart(stacked, "N2")
 
     file_name = f"{month_number}. SALES ANALYSIS {month_name} {year_full}.xlsx"
     output_path = os.path.join(output_folder, file_name)
