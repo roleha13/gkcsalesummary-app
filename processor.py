@@ -11,6 +11,7 @@ from openpyxl.chart import LineChart, PieChart, BarChart, Reference
 from openpyxl.chart.label import DataLabelList
 from openpyxl.chart.series import DataPoint
 from openpyxl.chart.shapes import GraphicalProperties
+from openpyxl.chart.axis import ChartLines
 
 MONEY_FMT = '#,##0.00;(#,##0.00)'
 YELLOW_FILL = PatternFill(start_color="FFFFF2CC", end_color="FFFFF2CC", fill_type="solid")
@@ -189,7 +190,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     line.x_axis.title = 'Day of Month'
     line.y_axis.title = 'Amount'
     line.legend.position = 'r'
-    line.y_axis.majorGridlines = True
+    line.y_axis.majorGridlines = Chartlines()
     line.width = 14
     line.height = 7
     dashboard.add_chart(line, 'D30')
@@ -204,7 +205,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     tips.x_axis.title = 'Day of Month'
     tips.y_axis.title = 'Amount'
     tips.legend.position = 'r'
-    tips.y_axis.majorGridlines = True
+    tips.y_axis.majorGridlines = Chartlines()
     tips.width = 14
     tips.height = 7
     dashboard.add_chart(tips, 'D50')
@@ -221,7 +222,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     stacked.x_axis.title = 'Day of Month'
     stacked.y_axis.title = 'Amount'
     stacked.legend.position = 't'
-    stacked.y_axis.majorGridlines = True
+    stacked.y_axis.majorGridlines = Chartlines()
     stacked.width = 16
     stacked.height = 9
     dashboard.add_chart(stacked, 'D75')
