@@ -12,7 +12,7 @@ from openpyxl.chart.label import DataLabelList
 from openpyxl.chart.series import DataPoint
 from openpyxl.chart.shapes import GraphicalProperties
 from openpyxl.chart.axis import ChartLines
-from openpyxl.chart.legend import Legend, Layout, ManualLayout
+from openpyxl.chart.legend import Legend
 
 MONEY_FMT = '#,##0.00;(#,##0.00)'
 YELLOW_FILL = PatternFill(start_color="FFFFF2CC", end_color="FFFFF2CC", fill_type="solid")
