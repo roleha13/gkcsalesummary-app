@@ -191,7 +191,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     line.x_axis.title = 'Day of Month'
     line.y_axis.title = 'Amount'
     line.legend = Legend()
-    line.y_axis.majorGridlines = Chartlines()
+    line.y_axis.majorGridlines = ChartLines()
     line.width = 14
     line.height = 7
     dashboard.add_chart(line, 'D30')
@@ -206,7 +206,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     tips.x_axis.title = 'Day of Month'
     tips.y_axis.title = 'Amount'
     tips.legend = Legend()
-    tips.y_axis.majorGridlines = Chartlines()
+    tips.y_axis.majorGridlines = ChartLines()
     tips.width = 14
     tips.height = 7
     dashboard.add_chart(tips, 'D50')
@@ -223,7 +223,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     stacked.x_axis.title = 'Day of Month'
     stacked.y_axis.title = 'Amount'
     stacked.legend = Legend()
-    stacked.y_axis.majorGridlines = Chartlines()
+    stacked.y_axis.majorGridlines = ChartLines()
     stacked.width = 16
     stacked.height = 9
     dashboard.add_chart(stacked, 'D75')
