@@ -12,6 +12,7 @@ from openpyxl.chart.label import DataLabelList
 from openpyxl.chart.series import DataPoint
 from openpyxl.chart.shapes import GraphicalProperties
 from openpyxl.chart.axis import ChartLines
+from openpyxl.chart.legend import Legend, Layout, ManualLayout
 
 MONEY_FMT = '#,##0.00;(#,##0.00)'
 YELLOW_FILL = PatternFill(start_color="FFFFF2CC", end_color="FFFFF2CC", fill_type="solid")
@@ -189,7 +190,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     line.marker = 'circle'
     line.x_axis.title = 'Day of Month'
     line.y_axis.title = 'Amount'
-    line.legend.position = 'r'
+    line.legend = Legend()
     line.y_axis.majorGridlines = Chartlines()
     line.width = 14
     line.height = 7
@@ -204,7 +205,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     tips.marker = 'circle'
     tips.x_axis.title = 'Day of Month'
     tips.y_axis.title = 'Amount'
-    tips.legend.position = 'r'
+    tips.legend = Legend()
     tips.y_axis.majorGridlines = Chartlines()
     tips.width = 14
     tips.height = 7
@@ -221,7 +222,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     stacked.style = 12
     stacked.x_axis.title = 'Day of Month'
     stacked.y_axis.title = 'Amount'
-    stacked.legend.position = 't'
+    stacked.legend = Legend()
     stacked.y_axis.majorGridlines = Chartlines()
     stacked.width = 16
     stacked.height = 9
