@@ -83,7 +83,7 @@ def extract_values_from_pdf(pdf_path: str):
         "date": date_obj,
         "TABLE AR": get_last_number_from_line_with_keyword(ar_text, "Sub-Totals"),
         "TABLE CARDS": get_last_number_from_line_with_keyword(cards_text, "Sub-Totals"),
-        "SLOTS AC+CT": get_last_number_from_line_with_keyword(slots_text, "SLOTS AC+CT"),
+        "SLOTS AT+CT": get_last_number_from_line_with_keyword(slots_text, "SLOTS AT+CT"),
         "SLOTS EG+AM+NOV": get_last_number_from_line_with_keyword(slots_text, "SLOTS EG+AM+NOV"),
         "SLOTS TBJ": get_last_number_from_line_with_keyword(slots_text, "SLOTS TBJ"),
     }
