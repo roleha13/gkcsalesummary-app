@@ -1,3 +1,5 @@
+# processor.py
+
 import os
 import re
 from datetime import datetime
@@ -47,7 +49,12 @@ HEADER_FILL = PatternFill(
 
 thin = Side(style='thin', color='000000')
 
-border = Border(left=thin, right=thin, top=thin, bottom=thin)
+border = Border(
+    left=thin,
+    right=thin,
+    top=thin,
+    bottom=thin
+)
 
 
 # =========================================================
@@ -55,47 +62,112 @@ border = Border(left=thin, right=thin, top=thin, bottom=thin)
 # =========================================================
 
 def get_last_number_from_line_with_keyword(text_block: str, keyword: str):
+
     for line in text_block.splitlines():
+
         if keyword in line:
+
             nums = re.findall(r"[\d,]+", line)
+
             if not nums:
                 continue
+
             value = float(nums[-1].replace(",", ""))
+
             return -value if '(' in line and ')' in line else value
-    raise ValueError(f"Could not find numeric value for keyword '{keyword}'.")
+
+    raise ValueError(
+        f"Could not find numeric value for keyword '{keyword}'."
+    )
 
 
 def extract_values_from_pdf(pdf_path: str):
-    with pdfplumber.open(pdf_path) as pdf:
-        text = "\n".join(page.extract_text() or "" for page in pdf.pages)
 
-    date_match = re.search(r"Date\s+(\d{1,2}-[A-Za-z]{3}-\d{2})", text)
+    with pdfplumber.open(pdf_path) as pdf:
+
+        text = "\n".join(
+            page.extract_text() or ""
+            for page in pdf.pages
+        )
+
+    date_match = re.search(
+        r"Date\s+(\d{1,2}-[A-Za-z]{3}-\d{2})",
+        text
+    )
+
     if not date_match:
         raise ValueError(f"Date not found in {pdf_path}")
 
-    date_obj = datetime.strptime(date_match.group(1), "%d-%b-%y")
+    date_obj = datetime.strptime(
+        date_match.group(1),
+        "%d-%b-%y"
+    )
 
-    ar_text = re.search(r"AMERICAN ROULETTE(.*?CARDS)", text, re.S).group(1)
-    cards_text = re.search(r"CARDS(.*?TABLES TOTALS)", text, re.S).group(1)
-    slots_text = re.search(r"SLOTS\s*\nBANK No\..*", text, re.S).group(0)
+    ar_text = re.search(
+        r"AMERICAN ROULETTE(.*?CARDS)",
+        text,
+        re.S
+    ).group(1)
+
+    cards_text = re.search(
+        r"CARDS(.*?TABLES TOTALS)",
+        text,
+        re.S
+    ).group(1)
+
+    slots_text = re.search(
+        r"SLOTS\s*\nBANK No\..*",
+        text,
+        re.S
+    ).group(0)
 
     return {
+
         "date": date_obj,
-        "TABLE AR": get_last_number_from_line_with_keyword(ar_text, "Sub-Totals"),
-        "TABLE CARDS": get_last_number_from_line_with_keyword(cards_text, "Sub-Totals"),
-        "SLOTS AC+CT": get_last_number_from_line_with_keyword(slots_text, "SLOTS AT+CT"),
-        "SLOTS EG+AM+NOV": get_last_number_from_line_with_keyword(slots_text, "SLOTS EG+AM+NOV"),
-        "SLOTS TBJ": get_last_number_from_line_with_keyword(slots_text, "SLOTS TBJ"),
+
+        "TABLE AR":
+            get_last_number_from_line_with_keyword(
+                ar_text,
+                "Sub-Totals"
+            ),
+
+        "TABLE CARDS":
+            get_last_number_from_line_with_keyword(
+                cards_text,
+                "Sub-Totals"
+            ),
+
+        "SLOTS AC+CT":
+            get_last_number_from_line_with_keyword(
+                slots_text,
+                "SLOTS AT+CT"
+            ),
+
+        "SLOTS EG+AM+NOV":
+            get_last_number_from_line_with_keyword(
+                slots_text,
+                "SLOTS EG+AM+NOV"
+            ),
+
+        "SLOTS TBJ":
+            get_last_number_from_line_with_keyword(
+                slots_text,
+                "SLOTS TBJ"
+            ),
     }
 
 
 # =========================================================
-# MAIN PROCESS
+# MAIN PROCESSING
 # =========================================================
 
 def process_pdfs_to_excel(pdf_files, output_folder):
 
-    rows = [extract_values_from_pdf(pdf) for pdf in pdf_files]
+    rows = [
+        extract_values_from_pdf(pdf)
+        for pdf in pdf_files
+    ]
+
     rows.sort(key=lambda r: r['date'])
 
     first_date = rows[0]['date']
@@ -106,43 +178,98 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     month_number = first_date.month
 
     wb = Workbook()
+
     ws = wb.active
     ws.title = 'Sales Summary'
 
     headers = [
-        'Date','TABLE AR','TABLE CARDS','SLOTS AC+CT',
-        'SLOTS EG+AM+NOV','SLOTS TBJ','TOTAL WINNINGS',
-        'TIPS','GROSS INCOME','CREDIT GIVEN','CREDIT REPAID',
+        'Date',
+        'TABLE AR',
+        'TABLE CARDS',
+        'SLOTS AC+CT',
+        'SLOTS EG+AM+NOV',
+        'SLOTS TBJ',
+        'TOTAL WINNINGS',
+        'TIPS',
+        'GROSS INCOME',
+        'CREDIT GIVEN',
+        'CREDIT REPAID',
         'NET OF CREDIT & TIPS'
     ]
 
     num_cols = len(headers)
 
-    # ================= HEADER =================
+    # =====================================================
+    # MAIN TITLE
+    # =====================================================
 
-    ws.merge_cells('A1:L1')
+    ws.merge_cells(
+        start_row=1,
+        start_column=1,
+        end_row=1,
+        end_column=num_cols
+    )
+
     ws['A1'] = 'GOLDEN KEY CASINO'
-    ws['A1'].font = Font(bold=True, size=14)
-    ws['A1'].alignment = Alignment(horizontal='center')
 
-    ws.merge_cells('A2:L2')
+    ws['A1'].font = Font(
+        bold=True,
+        size=14
+    )
+
+    ws['A1'].alignment = Alignment(
+        horizontal='center'
+    )
+
+    ws.merge_cells(
+        start_row=2,
+        start_column=1,
+        end_row=2,
+        end_column=num_cols
+    )
+
     ws['A2'] = 'SALES ANALYSIS FOR'
-    ws['A2'].alignment = Alignment(horizontal='center')
 
-    ws.merge_cells('A3:L3')
+    ws['A2'].alignment = Alignment(
+        horizontal='center'
+    )
+
+    ws.merge_cells(
+        start_row=3,
+        start_column=1,
+        end_row=3,
+        end_column=num_cols
+    )
+
     ws['A3'] = month_abbrev_year
+
     ws['A3'].fill = YELLOW_FILL
-    ws['A3'].alignment = Alignment(horizontal='center')
+
+    ws['A3'].alignment = Alignment(
+        horizontal='center'
+    )
+
+    # =====================================================
+    # HEADERS
+    # =====================================================
 
     ws.append(headers)
 
     for cell in ws[4]:
+
         cell.font = Font(bold=True)
+
         cell.fill = HEADER_FILL
-        cell.alignment = Alignment(horizontal='center')
+
+        cell.alignment = Alignment(
+            horizontal='center'
+        )
+
         cell.border = border
 
-    # ================= DATA =================
+    # =====================================================
+    # DATA
+    # =====================================================
 
     start_row = 5
 
@@ -151,154 +278,378 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         ws[f'A{i}'] = row['date']
         ws[f'A{i}'].number_format = 'd-mmm-yy'
 
-        keys = [
-            'TABLE AR','TABLE CARDS','SLOTS AC+CT',
-            'SLOTS EG+AM+NOV','SLOTS TBJ'
+        vals = [
+            'TABLE AR',
+            'TABLE CARDS',
+            'SLOTS AC+CT',
+            'SLOTS EG+AM+NOV',
+            'SLOTS TBJ'
         ]
 
-        for col, key in enumerate(keys, start=2):
-            ws.cell(i, col, row[key]).number_format = MONEY_FMT
+        for col, key in enumerate(vals, start=2):
 
+            ws.cell(
+                row=i,
+                column=col,
+                value=row[key]
+            ).number_format = MONEY_FMT
+
+        # TOTAL WINNINGS
         ws[f'G{i}'] = f'=SUM(B{i}:F{i})'
         ws[f'G{i}'].number_format = MONEY_FMT
 
+        # TIPS
         ws[f'H{i}'].number_format = MONEY_FMT
 
+        # GROSS INCOME
         ws[f'I{i}'] = f'=G{i}+H{i}'
         ws[f'I{i}'].number_format = MONEY_FMT
 
+        # CREDITS
         ws[f'J{i}'].number_format = MONEY_FMT
         ws[f'K{i}'].number_format = MONEY_FMT
 
+        # NET
         ws[f'L{i}'] = f'=I{i}+J{i}+K{i}'
         ws[f'L{i}'].number_format = MONEY_FMT
+
+    # =====================================================
+    # TOTAL ROW
+    # =====================================================
 
     total_row = start_row + len(rows)
 
     ws[f'A{total_row}'] = 'TOTAL'
+
     ws[f'A{total_row}'].font = Font(bold=True)
 
-    for col in range(2, num_cols + 1):
-        col_letter = get_column_letter(col)
+    for col_idx in range(2, num_cols + 1):
+
+        col_letter = get_column_letter(col_idx)
+
         ws[f'{col_letter}{total_row}'] = (
-            f'=SUM({col_letter}{start_row}:{col_letter}{total_row-1})'
+            f'=SUM({col_letter}{start_row}:'
+            f'{col_letter}{total_row-1})'
         )
+
+        ws[f'{col_letter}{total_row}'].number_format = MONEY_FMT
+
         ws[f'{col_letter}{total_row}'].font = Font(bold=True)
 
-    # ================= DASHBOARD =================
+    # =====================================================
+    # COLUMN WIDTHS
+    # =====================================================
+
+    widths = {
+        'A': 15,
+        'B': 18,
+        'C': 18,
+        'D': 18,
+        'E': 22,
+        'F': 18,
+        'G': 20,
+        'H': 15,
+        'I': 18,
+        'J': 18,
+        'K': 18,
+        'L': 24
+    }
+
+    for col, width in widths.items():
+        ws.column_dimensions[col].width = width
+
+    # =====================================================
+    # DASHBOARD SHEET
+    # =====================================================
 
     dashboard = wb.create_sheet('Dashboard')
+
     dashboard.sheet_view.showGridLines = False
 
     dashboard.merge_cells('A1:H1')
-    dashboard['A1'] = 'GOLDEN KEY CASINO – EXECUTIVE DASHBOARD'
-    dashboard['A1'].font = Font(color='FFFFFF', bold=True, size=16)
+
+    dashboard['A1'] = (
+        'GOLDEN KEY CASINO – EXECUTIVE DASHBOARD'
+    )
+
+    dashboard['A1'].font = Font(
+        color='FFFFFF',
+        bold=True,
+        size=16
+    )
+
     dashboard['A1'].fill = HEADER_FILL
-    dashboard['A1'].alignment = Alignment(horizontal='center')
 
-    # ================= PIE =================
+    dashboard['A1'].alignment = Alignment(
+        horizontal='center'
+    )
 
-    metrics = ['TABLE AR','TABLE CARDS','SLOTS AC+CT','SLOTS EG+AM+NOV','SLOTS TBJ']
+    # =====================================================
+    # SUMMARY TABLE
+    # =====================================================
 
-    for idx, m in enumerate(metrics, start=4):
-        dashboard[f'A{idx}'] = m
-        dashboard[f'B{idx}'] = f"='Sales Summary'!{get_column_letter(idx-2)}{total_row}"
+    dashboard['A3'] = 'Gaming Results Summary'
+
+    dashboard['A3'].font = Font(
+        bold=True,
+        size=12
+    )
+
+    metrics = [
+        'TABLE AR',
+        'TABLE CARDS',
+        'SLOTS AC+CT',
+        'SLOTS EG+AM+NOV',
+        'SLOTS TBJ'
+    ]
+
+    for idx, metric in enumerate(metrics, start=4):
+
+        dashboard[f'A{idx}'] = metric
+
+        dashboard[f'B{idx}'] = (
+            f"='Sales Summary'!"
+            f"{get_column_letter(idx-2)}{total_row}"
+        )
+
+        dashboard[f'B{idx}'].number_format = MONEY_FMT
+
+        dashboard[f'A{idx}'].border = border
+        dashboard[f'B{idx}'].border = border
+        dashboard[f'C{idx}'].border = border
 
     dashboard['A9'] = 'TOTAL WINNINGS'
-    dashboard['B9'] = f"='Sales Summary'!G{total_row}"
+
+    dashboard['B9'] = (
+        f"='Sales Summary'!G{total_row}"
+    )
+
+    dashboard['B9'].number_format = MONEY_FMT
+
+    dashboard['A9'].border = border
+    dashboard['B9'].border = border
+    dashboard['C9'].border = border
+
+    for idx in range(4, 9):
+
+        dashboard[f'C{idx}'] = f'=B{idx}/$B$9'
+
+        dashboard[f'C{idx}'].number_format = '0%'
+
+    # =====================================================
+    # PIE CHART
+    # =====================================================
 
     pie = PieChart()
-    pie.add_data(Reference(dashboard, min_col=2, min_row=4, max_row=8))
-    pie.set_categories(Reference(dashboard, min_col=1, min_row=4, max_row=8))
+
+    pie.add_data(
+        Reference(
+            dashboard,
+            min_col=2,
+            min_row=4,
+            max_row=8
+        )
+    )
+
+    pie.set_categories(
+        Reference(
+            dashboard,
+            min_col=1,
+            min_row=4,
+            max_row=8
+        )
+    )
+
     pie.title = 'Gaming Results Summary'
+
+    pie.style = 10
+
+    pie.height = 8
+    pie.width = 10
+
     pie.legend.position = 'r'
+
+    pie.dataLabels = DataLabelList()
+
+    pie.dataLabels.showPercent = True
+    pie.dataLabels.showLeaderLines = True
+
+    slice_colors = [
+        'C0504D',
+        '4F81BD',
+        '9BBB59',
+        '8064A2',
+        'F79646'
+    ]
+
+    for i, color in enumerate(slice_colors):
+
+        pt = DataPoint(idx=i)
+
+        pt.graphicalProperties = GraphicalProperties(
+            solidFill=color
+        )
+
+        pie.series[0].data_points.append(pt)
+
     dashboard.add_chart(pie, 'D3')
 
-    # ================= LINE CHARTS =================
+    # =====================================================
+    # CATEGORY DATES
+    # =====================================================
 
-    line_dates = Reference(ws, min_col=1, min_row=5, max_row=total_row-1)
+    line_dates = Reference(
+        ws,
+        min_col=1,
+        min_row=5,
+        max_row=total_row-1
+    )
 
-    def build_line(col, title, pos):
+    # =====================================================
+    # TOTAL WINNINGS LINE CHART
+    # =====================================================
 
-        chart = LineChart()
+    line = LineChart()
 
-        data = Reference(ws, min_col=col, max_col=col,
-                         min_row=4, max_row=total_row-1)
+    data = Reference(
+        ws,
+        min_col=7,
+        max_col=7,
+        min_row=4,
+        max_row=total_row-1
+    )
 
-        chart.add_data(data, titles_from_data=True)
-        chart.set_categories(line_dates)
+    line.add_data(
+        data,
+        titles_from_data=True
+    )
 
-        chart.title = title
+    line.set_categories(line_dates)
 
-        chart.width = 20
-        chart.height = 9
+    line.title = 'Monthly Total Winnings'
 
-        # NO LEGEND
-        chart.legend = None
+    line.style = 13
 
-        # AXIS LABELS
-        chart.x_axis.title = "Day of Month"
-        chart.y_axis.title = "Amount"
+    line.x_axis.title = 'Day of Month'
+    line.y_axis.title = 'Amount'
 
-        # LIGHT GRIDLINES
-        chart.y_axis.majorGridlines = ChartLines()
+    line.width = 18
+    line.height = 8
 
-        # AXIS LINES (light gray)
-        chart.x_axis.spPr = GraphicalProperties()
-        chart.y_axis.spPr = GraphicalProperties()
+    line.legend.position = 'r'
 
-        # SERIES STYLE (LIGHT BLUE)
-        s = chart.series[0]
-        s.graphicalProperties.line.solidFill = "5B9BD5"
-        s.graphicalProperties.line.width = 25000
-        s.marker.symbol = "circle"
-        s.marker.size = 7
+    line.y_axis.majorGridlines = ChartLines()
 
-        dashboard.add_chart(chart, pos)
+    s1 = line.series[0]
 
-    build_line(7, "Monthly Total Winnings", "D30")
-    build_line(8, "Monthly Tips", "D50")
+    s1.marker.symbol = "circle"
+    s1.marker.size = 7
 
-    # ================= STACKED CHART =================
+    s1.graphicalProperties.line.width = 25000
+
+    dashboard.add_chart(line, 'D30')
+
+    # =====================================================
+    # MONTHLY TIPS LINE CHART
+    # =====================================================
+
+    tips = LineChart()
+
+    data = Reference(
+        ws,
+        min_col=8,
+        max_col=8,
+        min_row=4,
+        max_row=total_row-1
+    )
+
+    tips.add_data(
+        data,
+        titles_from_data=True
+    )
+
+    tips.set_categories(line_dates)
+
+    tips.title = 'Monthly Tips'
+
+    tips.style = 13
+
+    tips.x_axis.title = 'Day of Month'
+    tips.y_axis.title = 'Amount'
+
+    tips.width = 18
+    tips.height = 8
+
+    tips.legend.position = 'r'
+
+    tips.y_axis.majorGridlines = ChartLines()
+
+    s1 = tips.series[0]
+
+    s1.marker.symbol = "circle"
+    s1.marker.size = 7
+
+    s1.graphicalProperties.line.width = 25000
+
+    dashboard.add_chart(tips, 'D50')
+
+    # =====================================================
+    # STACKED BAR CHART
+    # =====================================================
 
     stacked = BarChart()
 
-    data = Reference(ws, min_col=2, max_col=6,
-                     min_row=4, max_row=total_row-1)
+    data = Reference(
+        ws,
+        min_col=2,
+        max_col=6,
+        min_row=4,
+        max_row=total_row-1
+    )
 
-    stacked.add_data(data, titles_from_data=True)
+    stacked.add_data(
+        data,
+        titles_from_data=True,
+        from_rows=False
+    )
+
     stacked.set_categories(line_dates)
 
     stacked.type = 'col'
+
     stacked.grouping = 'stacked'
+
     stacked.overlap = 100
 
-    stacked.title = "Daily Gaming Mix"
+    stacked.title = 'Daily Gaming Mix'
 
-    stacked.width = 22
-    stacked.height = 11
+    stacked.style = 12
 
-    # ONLY LEGEND HERE (TOP)
-    stacked.legend.position = 't'
+    stacked.x_axis.title = 'Day of Month'
+    stacked.y_axis.title = 'Amount'
 
-    # AXES
-    stacked.x_axis.title = "Day of Month"
-    stacked.y_axis.title = "Amount"
+    stacked.width = 20
+    stacked.height = 10
+
+    stacked.legend.position = 'r'
 
     stacked.y_axis.majorGridlines = ChartLines()
 
-    colors = ['C0504D','4F81BD','9BBB59','8064A2','F79646']
-
-    for i, s in enumerate(stacked.series):
-        s.graphicalProperties.solidFill = colors[i]
-
     dashboard.add_chart(stacked, 'D75')
 
-    # ================= SAVE =================
+    # =====================================================
+    # SAVE FILE
+    # =====================================================
 
-    file_name = f"{month_number:02d}. SALES ANALYSIS {month_name} {year_full}.xlsx"
+    file_name = (
+        f"{month_number:02d}. SALES ANALYSIS "
+        f"{month_name} {year_full}.xlsx"
+    )
 
-    output_path = os.path.join(output_folder, file_name)
+    output_path = os.path.join(
+        output_folder,
+        file_name
+    )
 
     wb.save(output_path)
 
