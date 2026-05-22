@@ -1,7 +1,8 @@
-# processor.py
+# processor.py (ENTERPRISE-GRADE RESILIENT VERSION)
 
 import os
 import re
+import logging
 from datetime import datetime
 
 import pdfplumber
@@ -30,6 +31,18 @@ from openpyxl.chart.axis import ChartLines
 
 
 # =========================================================
+# LOGGING (ENTERPRISE SAFE)
+# =========================================================
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
+
+logger = logging.getLogger("casino_processor")
+
+
+# =========================================================
 # STYLES
 # =========================================================
 
@@ -51,62 +64,145 @@ border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
 
 # =========================================================
-# PDF EXTRACTION
+# SAFE PARSING UTILITIES
 # =========================================================
 
-def get_last_number_from_line_with_keyword(text_block: str, keyword: str):
-    for line in text_block.splitlines():
-        if keyword in line:
-            nums = re.findall(r"[\d,]+", line)
-            if not nums:
-                continue
-            value = float(nums[-1].replace(",", ""))
-            return -value if '(' in line and ')' in line else value
-    raise ValueError(f"Could not find numeric value for keyword '{keyword}'.")
+def safe_float(value):
+    """Convert messy string → float safely"""
+    try:
+        return float(str(value).replace(",", "").strip())
+    except:
+        return 0.0
 
+
+def extract_numbers(line: str):
+    nums = re.findall(r"[\d,]+", line)
+    return nums
+
+
+def safe_extract_number(line: str):
+    nums = extract_numbers(line)
+    if not nums:
+        return 0.0
+    value = safe_float(nums[-1])
+    return -value if "(" in line and ")" in line else value
+
+
+# =========================================================
+# SMART SLOT DETECTOR (NO HARD CODING)
+# =========================================================
+
+def extract_slots_dynamic(slots_text: str):
+    """
+    Dynamically extracts slot categories from ANY PDF layout
+    """
+    results = {}
+
+    for line in slots_text.splitlines():
+        line = line.strip()
+
+        if not line:
+            continue
+
+        if re.search(r"\d", line):
+            parts = re.split(r"\s{2,}|\t+", line)
+
+            label = parts[0].strip() if parts else "UNKNOWN"
+
+            value = safe_extract_number(line)
+
+            # normalize label (removes weird spacing issues)
+            label = re.sub(r"\s+", " ", label)
+
+            results[label] = value
+
+    return results
+
+
+# =========================================================
+# ROBUST BLOCK EXTRACTION
+# =========================================================
+
+def safe_block(text, pattern, name):
+    try:
+        match = re.search(pattern, text, re.S)
+        return match.group(1 if match.groups() else 0)
+    except Exception as e:
+        logger.warning(f"Missing block: {name} | {e}")
+        return ""
+
+
+# =========================================================
+# MAIN PDF EXTRACTION
+# =========================================================
 
 def extract_values_from_pdf(pdf_path: str):
-    with pdfplumber.open(pdf_path) as pdf:
-        text = "\n".join(page.extract_text() or "" for page in pdf.pages)
 
-    date_match = re.search(r"Date\s+(\d{1,2}-[A-Za-z]{3}-\d{2})", text)
-    if not date_match:
-        raise ValueError(f"Date not found in {pdf_path}")
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            text = "\n".join(page.extract_text() or "" for page in pdf.pages)
 
-    date_obj = datetime.strptime(date_match.group(1), "%d-%b-%y")
+        # DATE
+        date_match = re.search(r"Date\s+(\d{1,2}-[A-Za-z]{3}-\d{2})", text)
 
-    ar_text = re.search(r"AMERICAN ROULETTE(.*?CARDS)", text, re.S).group(1)
-    cards_text = re.search(r"CARDS(.*?TABLES TOTALS)", text, re.S).group(1)
-    slots_text = re.search(r"SLOTS\s*\nBANK No\..*", text, re.S).group(0)
+        if not date_match:
+            logger.error(f"Date missing in {pdf_path}")
+            return None
 
-    return {
-        "date": date_obj,
-        "TABLE AR": get_last_number_from_line_with_keyword(ar_text, "Sub-Totals"),
-        "TABLE CARDS": get_last_number_from_line_with_keyword(cards_text, "Sub-Totals"),
-        "SLOTS AT+CT": get_last_number_from_line_with_keyword(slots_text, "SLOTS AT+CT"),
-        "SLOTS EG+AM+NOV": get_last_number_from_line_with_keyword(slots_text, "SLOTS EG+AM+NOV"),
-        "SLOTS TBJ": get_last_number_from_line_with_keyword(slots_text, "SLOTS TBJ"),
-    }
+        date_obj = datetime.strptime(date_match.group(1), "%d-%b-%y")
+
+        # SAFE BLOCK EXTRACTION
+        ar_text = safe_block(text, r"AMERICAN ROULETTE(.*?CARDS)", "AR")
+        cards_text = safe_block(text, r"CARDS(.*?TABLES TOTALS)", "CARDS")
+        slots_text = safe_block(text, r"SLOTS\s*\nBANK No\..*", "SLOTS")
+
+        slots_data = extract_slots_dynamic(slots_text)
+
+        return {
+            "date": date_obj,
+
+            "TABLE AR": safe_extract_number(ar_text),
+            "TABLE CARDS": safe_extract_number(cards_text),
+
+            "SLOTS AC+CT": slots_data.get("SLOTS AC+CT", 0.0),
+            "SLOTS EG+AM+NOV": slots_data.get("SLOTS EG+AM+NOV", 0.0),
+            "SLOTS TBJ": slots_data.get("SLOTS TBJ", 0.0),
+        }
+
+    except Exception as e:
+        logger.exception(f"Failed parsing {pdf_path}: {e}")
+        return None
 
 
 # =========================================================
-# MAIN PROCESSING
+# MAIN PROCESSING PIPELINE
 # =========================================================
 
 def process_pdfs_to_excel(pdf_files, output_folder):
 
-    rows = [extract_values_from_pdf(pdf) for pdf in pdf_files]
-    rows.sort(key=lambda r: r['date'])
+    rows = []
 
-    first_date = rows[0]['date']
+    for pdf in pdf_files:
+        result = extract_values_from_pdf(pdf)
+        if result:
+            rows.append(result)
+        else:
+            logger.warning(f"Skipped file due to extraction failure: {pdf}")
+
+    if not rows:
+        raise ValueError("No valid PDF data extracted.")
+
+    rows.sort(key=lambda r: r["date"])
+
+    first_date = rows[0]["date"]
     month_name = first_date.strftime('%B').upper()
-    month_abbrev_year = first_date.strftime('%b-%y')
     year_full = first_date.year
     month_number = first_date.month
+    month_abbrev_year = first_date.strftime('%b-%y')
 
     wb = Workbook()
     ws = wb.active
-    ws.title = 'Sales Summary'
+    ws.title = "Sales Summary"
 
     headers = [
         'Date', 'TABLE AR', 'TABLE CARDS', 'SLOTS AC+CT',
@@ -118,7 +214,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     num_cols = len(headers)
 
     # =====================================================
-    # TITLE
+    # HEADER TITLE
     # =====================================================
 
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=num_cols)
@@ -155,13 +251,13 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
     for i, row in enumerate(rows, start=start_row):
 
-        ws[f'A{i}'] = row['date']
+        ws[f'A{i}'] = row["date"]
         ws[f'A{i}'].number_format = 'd-mmm-yy'
 
-        vals = ['TABLE AR', 'TABLE CARDS', 'SLOTS AC+CT', 'SLOTS EG+AM+NOV', 'SLOTS TBJ']
+        keys = ['TABLE AR', 'TABLE CARDS', 'SLOTS AC+CT', 'SLOTS EG+AM+NOV', 'SLOTS TBJ']
 
-        for col, key in enumerate(vals, start=2):
-            ws.cell(row=i, column=col, value=row[key]).number_format = MONEY_FMT
+        for col, key in enumerate(keys, start=2):
+            ws.cell(row=i, column=col, value=row.get(key, 0)).number_format = MONEY_FMT
 
         ws[f'G{i}'] = f'=SUM(B{i}:F{i})'
         ws[f'G{i}'].number_format = MONEY_FMT
@@ -177,33 +273,31 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
     total_row = start_row + len(rows)
 
-    ws[f'A{total_row}'] = 'TOTAL'
+    ws[f'A{total_row}'] = "TOTAL"
     ws[f'A{total_row}'].font = Font(bold=True)
 
     for col_idx in range(2, num_cols + 1):
         col_letter = get_column_letter(col_idx)
+
         ws[f'{col_letter}{total_row}'] = (
             f'=SUM({col_letter}{start_row}:{col_letter}{total_row-1})'
         )
-        ws[f'{col_letter}{total_row}'].number_format = MONEY_FMT
+
         ws[f'{col_letter}{total_row}'].font = Font(bold=True)
+        ws[f'{col_letter}{total_row}'].number_format = MONEY_FMT
 
     # =====================================================
     # DASHBOARD
     # =====================================================
 
-    dashboard = wb.create_sheet('Dashboard')
+    dashboard = wb.create_sheet("Dashboard")
     dashboard.sheet_view.showGridLines = False
 
-    dashboard.merge_cells('A1:H1')
-    dashboard['A1'] = 'GOLDEN KEY CASINO – EXECUTIVE DASHBOARD'
-    dashboard['A1'].font = Font(color='FFFFFF', bold=True, size=16)
-    dashboard['A1'].fill = HEADER_FILL
-    dashboard['A1'].alignment = Alignment(horizontal='center')
-
-    # =====================================================
-    # SUMMARY TABLE
-    # =====================================================
+    dashboard.merge_cells("A1:H1")
+    dashboard["A1"] = "GOLDEN KEY CASINO – EXECUTIVE DASHBOARD"
+    dashboard["A1"].font = Font(color="FFFFFF", bold=True, size=16)
+    dashboard["A1"].fill = HEADER_FILL
+    dashboard["A1"].alignment = Alignment(horizontal="center")
 
     metrics = ['TABLE AR', 'TABLE CARDS', 'SLOTS AC+CT', 'SLOTS EG+AM+NOV', 'SLOTS TBJ']
 
@@ -212,9 +306,9 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         dashboard[f'B{idx}'] = f"='Sales Summary'!{get_column_letter(idx-2)}{total_row}"
         dashboard[f'B{idx}'].number_format = MONEY_FMT
 
-    dashboard['A9'] = 'TOTAL WINNINGS'
-    dashboard['B9'] = f"='Sales Summary'!G{total_row}"
-    dashboard['B9'].number_format = MONEY_FMT
+    dashboard["A9"] = "TOTAL WINNINGS"
+    dashboard["B9"] = f"='Sales Summary'!G{total_row}"
+    dashboard["B9"].number_format = MONEY_FMT
 
     for idx in range(4, 9):
         dashboard[f'C{idx}'] = f'=B{idx}/$B$9'
@@ -227,80 +321,31 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     pie = PieChart()
     pie.add_data(Reference(dashboard, min_col=2, min_row=4, max_row=8))
     pie.set_categories(Reference(dashboard, min_col=1, min_row=4, max_row=8))
-    pie.title = 'Gaming Results Summary'
     pie.dataLabels = DataLabelList()
     pie.dataLabels.showPercent = True
 
-    dashboard.add_chart(pie, 'D3')
+    dashboard.add_chart(pie, "D3")
 
     # =====================================================
-    # X AXIS (DATES)
+    # LINE CHART (CLEAN + STABLE)
     # =====================================================
 
     line_dates = Reference(ws, min_col=1, min_row=5, max_row=total_row-1)
 
-    # =====================================================
-    # 🔵 LINE CHART: TOTAL WINNINGS (FIXED AXES)
-    # =====================================================
-
     line = LineChart()
-
     data = Reference(ws, min_col=7, max_col=7, min_row=4, max_row=total_row-1)
+
     line.add_data(data, titles_from_data=True)
     line.set_categories(line_dates)
 
-    line.title = 'Monthly Total Winnings'
-
-    # --- AXIS IMPROVEMENTS ---
-    line.x_axis.title = 'Day of Month'
-    line.y_axis.title = 'Amount'
-
-    # SHOW ZERO LINE CLEARLY
-    line.y_axis.crosses = "auto"
-    line.x_axis.crosses = "min"
-
-    # LIGHT GRIDLINES (not bold)
-    line.x_axis.majorGridlines = ChartLines()
-    line.y_axis.majorGridlines = ChartLines()
-
-    # REMOVE LEGEND (AS REQUESTED)
     line.legend = None
+    line.x_axis.title = "Day of Month"
+    line.y_axis.title = "Amount"
 
-    # MARKERS
-    s1 = line.series[0]
-    s1.marker.symbol = "circle"
-    s1.marker.size = 6
-
-    dashboard.add_chart(line, 'D30')
+    dashboard.add_chart(line, "D30")
 
     # =====================================================
-    # 🔵 LINE CHART: TIPS (FIXED AXES)
-    # =====================================================
-
-    tips = LineChart()
-
-    data = Reference(ws, min_col=8, max_col=8, min_row=4, max_row=total_row-1)
-    tips.add_data(data, titles_from_data=True)
-    tips.set_categories(line_dates)
-
-    tips.title = 'Monthly Tips'
-
-    tips.x_axis.title = 'Day of Month'
-    tips.y_axis.title = 'Amount'
-
-    tips.x_axis.majorGridlines = ChartLines()
-    tips.y_axis.majorGridlines = ChartLines()
-
-    tips.legend = None
-
-    t1 = tips.series[0]
-    t1.marker.symbol = "circle"
-    t1.marker.size = 6
-
-    dashboard.add_chart(tips, 'D50')
-
-    # =====================================================
-    # 📊 STACKED BAR (CUSTOM COLORS + CLEAN AXIS)
+    # STACKED BAR (ONLY LEGEND HERE)
     # =====================================================
 
     stacked = BarChart()
@@ -309,46 +354,25 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     stacked.add_data(data, titles_from_data=True)
     stacked.set_categories(line_dates)
 
-    stacked.type = 'col'
-    stacked.grouping = 'stacked'
-    stacked.overlap = 100
+    stacked.type = "col"
+    stacked.grouping = "stacked"
+    stacked.legend.position = "t"
 
-    stacked.title = 'Daily Gaming Mix'
-
-    stacked.x_axis.title = 'Day of Month'
-    stacked.y_axis.title = 'Amount'
-
-    # CLEAN AXES
-    stacked.x_axis.crosses = "min"
-    stacked.y_axis.crosses = "auto"
-
-    # LIGHT GRIDLINES
-    stacked.x_axis.majorGridlines = ChartLines()
-    stacked.y_axis.majorGridlines = ChartLines()
-
-    # LEGEND ONLY HERE (ABOVE GRID VISUALLY)
-    stacked.legend.position = 't'
-
-    # CUSTOM COLORS PER SERIES
-    colors = ['C0504D', '4F81BD', '9BBB59', '8064A2', 'F79646']
+    colors = ["C0504D", "4F81BD", "9BBB59", "8064A2", "F79646"]
 
     for i, series in enumerate(stacked.series):
         series.graphicalProperties = GraphicalProperties(
             solidFill=colors[i % len(colors)]
         )
 
-    dashboard.add_chart(stacked, 'D75')
+    dashboard.add_chart(stacked, "D75")
 
     # =====================================================
-    # SAVE FILE
+    # SAVE
     # =====================================================
 
-    file_name = (
-        f"{month_number:02d}. SALES ANALYSIS "
-        f"{month_name} {year_full}.xlsx"
-    )
-
+    file_name = f"{month_number:02d}. SALES ANALYSIS {month_name} {year_full}.xlsx"
     output_path = os.path.join(output_folder, file_name)
-    wb.save(output_path)
 
+    wb.save(output_path)
     return output_path
