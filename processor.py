@@ -61,25 +61,47 @@ border = Border(
 # PDF EXTRACTION
 # =========================================================
 
-def get_last_number_from_line_with_keyword(text_block: str, keyword: str):
+def get_last_number_from_line_with_keyword(
+    text_block: str,
+    keywords
+):
+
+    if isinstance(keywords, str):
+        keywords = [keywords]
+
+    cleaned_keywords = [
+        k.replace(" ", "").upper()
+        for k in keywords
+    ]
 
     for line in text_block.splitlines():
 
-        if keyword in line:
+        line_clean = (
+            line
+            .replace(" ", "")
+            .upper()
+        )
 
-            nums = re.findall(r"[\d,]+", line)
+        for keyword_clean in cleaned_keywords:
 
-            if not nums:
-                continue
+            if keyword_clean in line_clean:
 
-            value = float(nums[-1].replace(",", ""))
+                nums = re.findall(r"[\d,]+", line)
 
-            return -value if '(' in line and ')' in line else value
+                if not nums:
+                    continue
+
+                value = float(nums[-1].replace(",", ""))
+
+                return (
+                    -value
+                    if '(' in line and ')' in line
+                    else value
+                )
 
     raise ValueError(
-        f"Could not find numeric value for keyword '{keyword}'."
+        f"Could not find numeric value for keywords: {keywords}"
     )
-
 
 def extract_values_from_pdf(pdf_path: str):
 
@@ -140,7 +162,10 @@ def extract_values_from_pdf(pdf_path: str):
         "SLOTS AT+CT+EGT":
             get_last_number_from_line_with_keyword(
                 slots_text,
-                "SLOTS AT+CT+EGT"
+                [
+                     "SLOTS AT+CT+EGT",
+                     "SLOTS AT+CT"
+                ]
             ),
 
         "SLOTS EG+AM+NOV":
