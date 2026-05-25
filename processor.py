@@ -137,10 +137,10 @@ def extract_values_from_pdf(pdf_path: str):
                 "Sub-Totals"
             ),
 
-        "SLOTS AC+CT":
+        "SLOTS AT+CT+EGT":
             get_last_number_from_line_with_keyword(
                 slots_text,
-                "SLOTS AT+CT"
+                "SLOTS AT+CT+EGT"
             ),
 
         "SLOTS EG+AM+NOV":
@@ -186,15 +186,12 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         'Date',
         'TABLE AR',
         'TABLE CARDS',
-        'SLOTS AC+CT',
+        'SLOTS AT+CT+EGT',
         'SLOTS EG+AM+NOV',
         'SLOTS TBJ',
         'TOTAL WINNINGS',
         'TIPS',
-        'GROSS INCOME',
-        'CREDIT GIVEN',
-        'CREDIT REPAID',
-        'NET OF CREDIT & TIPS'
+        'GROSS INCOME'
     ]
 
     num_cols = len(headers)
@@ -281,7 +278,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         vals = [
             'TABLE AR',
             'TABLE CARDS',
-            'SLOTS AC+CT',
+            'SLOTS AT+CT+EGT',
             'SLOTS EG+AM+NOV',
             'SLOTS TBJ'
         ]
@@ -304,14 +301,6 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         # GROSS INCOME
         ws[f'I{i}'] = f'=G{i}+H{i}'
         ws[f'I{i}'].number_format = MONEY_FMT
-
-        # CREDITS
-        ws[f'J{i}'].number_format = MONEY_FMT
-        ws[f'K{i}'].number_format = MONEY_FMT
-
-        # NET
-        ws[f'L{i}'] = f'=I{i}+J{i}+K{i}'
-        ws[f'L{i}'].number_format = MONEY_FMT
 
     # =====================================================
     # TOTAL ROW
@@ -344,15 +333,12 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         'A': 15,
         'B': 18,
         'C': 18,
-        'D': 18,
+        'D': 22,
         'E': 22,
         'F': 18,
         'G': 20,
         'H': 15,
-        'I': 18,
-        'J': 18,
-        'K': 18,
-        'L': 24
+        'I': 18
     }
 
     for col, width in widths.items():
@@ -398,7 +384,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     metrics = [
         'TABLE AR',
         'TABLE CARDS',
-        'SLOTS AC+CT',
+        'SLOTS AT+CT+EGT',
         'SLOTS EG+AM+NOV',
         'SLOTS TBJ'
     ]
@@ -435,6 +421,10 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         dashboard[f'C{idx}'] = f'=B{idx}/$B$9'
 
         dashboard[f'C{idx}'].number_format = '0%'
+
+    dashboard['C9'] = '=B9/B9'
+    dashboard['C9'].number_format = '0%'
+    dashboard['C9'].font = Font(bold=True)
 
     # =====================================================
     # PIE CHART
@@ -536,9 +526,17 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     line.width = 18
     line.height = 8
 
-    line.legend.position = 'r'
+    line.legend = None
 
     line.y_axis.majorGridlines = ChartLines()
+
+    line.x_axis.spPr = GraphicalProperties(
+        ln=GraphicalProperties(solidFill="000000")
+    )
+
+    line.y_axis.spPr = GraphicalProperties(
+        ln=GraphicalProperties(solidFill="000000")
+    )
 
     s1 = line.series[0]
 
@@ -580,9 +578,17 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     tips.width = 18
     tips.height = 8
 
-    tips.legend.position = 'r'
+    tips.legend = None
 
     tips.y_axis.majorGridlines = ChartLines()
+
+    tips.x_axis.spPr = GraphicalProperties(
+        ln=GraphicalProperties(solidFill="000000")
+    )
+
+    tips.y_axis.spPr = GraphicalProperties(
+        ln=GraphicalProperties(solidFill="000000")
+    )
 
     s1 = tips.series[0]
 
@@ -634,6 +640,28 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     stacked.legend.position = 'r'
 
     stacked.y_axis.majorGridlines = ChartLines()
+
+    stack_colors = [
+        '4F81BD',
+        'C0504D',
+        '9BBB59',
+        '8064A2',
+        'F2C811'
+    ]
+
+    for idx, series in enumerate(stacked.series):
+
+        series.graphicalProperties = GraphicalProperties(
+            solidFill=stack_colors[idx]
+        )
+
+    stacked.x_axis.spPr = GraphicalProperties(
+        ln=GraphicalProperties(solidFill="000000")
+    )
+
+    stacked.y_axis.spPr = GraphicalProperties(
+        ln=GraphicalProperties(solidFill="000000")
+    )
 
     dashboard.add_chart(stacked, 'D75')
 
