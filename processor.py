@@ -555,14 +555,6 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
     line.y_axis.majorGridlines = ChartLines()
 
-    line.x_axis.spPr = GraphicalProperties(
-        ln=GraphicalProperties(solidFill="000000")
-    )
-
-    line.y_axis.spPr = GraphicalProperties(
-        ln=GraphicalProperties(solidFill="000000")
-    )
-
     s1 = line.series[0]
 
     s1.marker.symbol = "circle"
@@ -607,16 +599,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
     tips.y_axis.majorGridlines = ChartLines()
 
-    tips.x_axis.spPr = GraphicalProperties(
-        ln=GraphicalProperties(solidFill="000000")
-    )
-
-    tips.y_axis.spPr = GraphicalProperties(
-        ln=GraphicalProperties(solidFill="000000")
-    )
-
     s1 = tips.series[0]
-
     s1.marker.symbol = "circle"
     s1.marker.size = 7
 
@@ -679,14 +662,6 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         series.graphicalProperties = GraphicalProperties(
             solidFill=stack_colors[idx]
         )
-
-    stacked.x_axis.spPr = GraphicalProperties(
-        ln=GraphicalProperties(solidFill="000000")
-    )
-
-    stacked.y_axis.spPr = GraphicalProperties(
-        ln=GraphicalProperties(solidFill="000000")
-    )
 
     dashboard.add_chart(stacked, 'D75')
 
