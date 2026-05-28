@@ -27,7 +27,6 @@ from openpyxl.chart.label import DataLabelList
 from openpyxl.chart.series import DataPoint
 from openpyxl.chart.shapes import GraphicalProperties
 from openpyxl.chart.axis import ChartLines
-from openpyxl.chart.legend import Legend
 
 
 # =========================================================
@@ -36,24 +35,42 @@ from openpyxl.chart.legend import Legend
 
 MONEY_FMT = '#,##0.00;(#,##0.00)'
 
-YELLOW_FILL = PatternFill(
-    start_color="FFFFF2CC",
-    end_color="FFFFF2CC",
+LIGHT_ORANGE_FILL = PatternFill(
+    start_color="FCE4D6",
+    end_color="FCE4D6",
     fill_type="solid"
 )
 
-HEADER_FILL = PatternFill(
+DARK_BLUE_FILL = PatternFill(
     fill_type="solid",
-    fgColor="1F4E78"
+    fgColor="1F1F1F"
 )
 
 thin = Side(style='thin', color='000000')
+thick = Side(style='thick', color='000000')
+double = Side(style='double', color='000000')
 
 border = Border(
     left=thin,
     right=thin,
     top=thin,
     bottom=thin
+)
+
+header_border = Border(
+    left=thick,
+    right=thick,
+    top=thick,
+    bottom=thick
+)
+
+horizontal_border = Border(
+    bottom=thin
+)
+
+total_border = Border(
+    top=thick,
+    bottom=double
 )
 
 
@@ -102,6 +119,7 @@ def get_last_number_from_line_with_keyword(
     raise ValueError(
         f"Could not find numeric value for keywords: {keywords}"
     )
+
 
 def extract_values_from_pdf(pdf_path: str):
 
@@ -163,8 +181,8 @@ def extract_values_from_pdf(pdf_path: str):
             get_last_number_from_line_with_keyword(
                 slots_text,
                 [
-                     "SLOTS AT+CT+EGT",
-                     "SLOTS AT+CT"
+                    "SLOTS AT+CT+EGT",
+                    "SLOTS AT+CT"
                 ]
             ),
 
@@ -180,6 +198,23 @@ def extract_values_from_pdf(pdf_path: str):
                 "SLOTS TBJ"
             ),
     }
+
+
+# =========================================================
+# DARK CHART STYLE
+# =========================================================
+
+def apply_dark_chart_style(chart):
+
+    chart.graphical_properties = GraphicalProperties(
+        noFill=False,
+        solidFill="1E1E1E"
+    )
+
+    chart.plotArea.graphicalProperties = GraphicalProperties(
+        noFill=False,
+        solidFill="2B2B2B"
+    )
 
 
 # =========================================================
@@ -207,6 +242,9 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     ws = wb.active
     ws.title = 'Sales Summary'
 
+    # REMOVE GRIDLINES
+    ws.sheet_view.showGridLines = False
+
     headers = [
         'Date',
         'TABLE AR',
@@ -222,7 +260,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     num_cols = len(headers)
 
     # =====================================================
-    # MAIN TITLE
+    # MAIN TITLES
     # =====================================================
 
     ws.merge_cells(
@@ -235,12 +273,14 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     ws['A1'] = 'GOLDEN KEY CASINO'
 
     ws['A1'].font = Font(
-        bold=True,
-        size=14
+        name='Arial Black',
+        size=12,
+        bold=True
     )
 
     ws['A1'].alignment = Alignment(
-        horizontal='center'
+        horizontal='center',
+        vertical='center'
     )
 
     ws.merge_cells(
@@ -252,8 +292,15 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
     ws['A2'] = 'SALES ANALYSIS FOR'
 
+    ws['A2'].font = Font(
+        name='Arial Black',
+        size=12,
+        bold=True
+    )
+
     ws['A2'].alignment = Alignment(
-        horizontal='center'
+        horizontal='center',
+        vertical='center'
     )
 
     ws.merge_cells(
@@ -265,10 +312,17 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
     ws['A3'] = month_abbrev_year
 
-    ws['A3'].fill = YELLOW_FILL
+    ws['A3'].fill = LIGHT_ORANGE_FILL
+
+    ws['A3'].font = Font(
+        name='Arial Black',
+        size=12,
+        bold=True
+    )
 
     ws['A3'].alignment = Alignment(
-        horizontal='center'
+        horizontal='center',
+        vertical='center'
     )
 
     # =====================================================
@@ -279,15 +333,18 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
     for cell in ws[4]:
 
-        cell.font = Font(bold=True)
-
-        cell.fill = HEADER_FILL
-
-        cell.alignment = Alignment(
-            horizontal='center'
+        cell.font = Font(
+            name='Arial',
+            size=11,
+            bold=True
         )
 
-        cell.border = border
+        cell.alignment = Alignment(
+            horizontal='center',
+            vertical='center'
+        )
+
+        cell.border = header_border
 
     # =====================================================
     # DATA
@@ -297,8 +354,12 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
     for i, row in enumerate(rows, start=start_row):
 
+        # DATE COLUMN
         ws[f'A{i}'] = row['date']
+
         ws[f'A{i}'].number_format = 'd-mmm-yy'
+
+        ws[f'A{i}'].fill = LIGHT_ORANGE_FILL
 
         vals = [
             'TABLE AR',
@@ -327,6 +388,18 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         ws[f'I{i}'] = f'=G{i}+H{i}'
         ws[f'I{i}'].number_format = MONEY_FMT
 
+        # BODY STYLING
+        for col in range(1, num_cols + 1):
+
+            cell = ws.cell(row=i, column=col)
+
+            cell.font = Font(
+                name='Arial',
+                size=11
+            )
+
+            cell.border = horizontal_border
+
     # =====================================================
     # TOTAL ROW
     # =====================================================
@@ -335,7 +408,13 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
     ws[f'A{total_row}'] = 'TOTAL'
 
-    ws[f'A{total_row}'].font = Font(bold=True)
+    ws[f'A{total_row}'].font = Font(
+        name='Arial',
+        size=11,
+        bold=True
+    )
+
+    ws[f'A{total_row}'].border = total_border
 
     for col_idx in range(2, num_cols + 1):
 
@@ -348,7 +427,13 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
         ws[f'{col_letter}{total_row}'].number_format = MONEY_FMT
 
-        ws[f'{col_letter}{total_row}'].font = Font(bold=True)
+        ws[f'{col_letter}{total_row}'].font = Font(
+            name='Arial',
+            size=11,
+            bold=True
+        )
+
+        ws[f'{col_letter}{total_row}'].border = total_border
 
     # =====================================================
     # COLUMN WIDTHS
@@ -389,7 +474,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         size=16
     )
 
-    dashboard['A1'].fill = HEADER_FILL
+    dashboard['A1'].fill = DARK_BLUE_FILL
 
     dashboard['A1'].alignment = Alignment(
         horizontal='center'
@@ -448,7 +533,9 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         dashboard[f'C{idx}'].number_format = '0%'
 
     dashboard['C9'] = '=B9/B9'
+
     dashboard['C9'].number_format = '0%'
+
     dashboard['C9'].font = Font(bold=True)
 
     # =====================================================
@@ -507,6 +594,8 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
         pie.series[0].data_points.append(pt)
 
+    apply_dark_chart_style(pie)
+
     dashboard.add_chart(pie, 'D3')
 
     # =====================================================
@@ -562,6 +651,8 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
     s1.graphicalProperties.line.width = 25000
 
+    apply_dark_chart_style(line)
+
     dashboard.add_chart(line, 'D30')
 
     # =====================================================
@@ -600,10 +691,13 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     tips.y_axis.majorGridlines = ChartLines()
 
     s1 = tips.series[0]
+
     s1.marker.symbol = "circle"
     s1.marker.size = 7
 
     s1.graphicalProperties.line.width = 25000
+
+    apply_dark_chart_style(tips)
 
     dashboard.add_chart(tips, 'D50')
 
@@ -659,9 +753,9 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
     for idx, series in enumerate(stacked.series):
 
-        series.graphicalProperties = GraphicalProperties(
-            solidFill=stack_colors[idx]
-        )
+        series.graphicalProperties.solidFill = stack_colors[idx]
+
+    apply_dark_chart_style(stacked)
 
     dashboard.add_chart(stacked, 'D75')
 
