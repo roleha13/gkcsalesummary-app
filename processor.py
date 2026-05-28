@@ -206,15 +206,15 @@ def extract_values_from_pdf(pdf_path: str):
 
 def apply_dark_chart_style(chart):
 
-    chart.graphical_properties = GraphicalProperties(
-        noFill=False,
-        solidFill="1E1E1E"
-    )
+    try:
 
-    chart.plotArea.graphicalProperties = GraphicalProperties(
-        noFill=False,
-        solidFill="2B2B2B"
-    )
+        chart.graphical_properties = GraphicalProperties(
+            noFill=False,
+            solidFill="1E1E1E"
+        )
+
+    except:
+        pass
 
 
 # =========================================================
