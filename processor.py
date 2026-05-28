@@ -25,7 +25,6 @@ from openpyxl.chart import (
 
 from openpyxl.chart.label import DataLabelList
 from openpyxl.chart.series import DataPoint
-from openpyxl.chart.shapes import GraphicalProperties
 from openpyxl.chart.axis import ChartLines
 
 
@@ -41,15 +40,11 @@ LIGHT_ORANGE_FILL = PatternFill(
     fill_type="solid"
 )
 
-DARK_BLUE_FILL = PatternFill(
-    fill_type="solid",
-    fgColor="1F1F1F"
-)
-
 thin = Side(style='thin', color='000000')
 thick = Side(style='thick', color='000000')
 double = Side(style='double', color='000000')
 
+# STANDARD BORDER
 border = Border(
     left=thin,
     right=thin,
@@ -57,6 +52,7 @@ border = Border(
     bottom=thin
 )
 
+# HEADER BORDER
 header_border = Border(
     left=thick,
     right=thick,
@@ -64,11 +60,17 @@ header_border = Border(
     bottom=thick
 )
 
-horizontal_border = Border(
+# BODY BORDER
+body_border = Border(
+    left=thick,
+    right=thick,
     bottom=thin
 )
 
+# TOTAL BORDER
 total_border = Border(
+    left=thick,
+    right=thick,
     top=thick,
     bottom=double
 )
@@ -198,23 +200,6 @@ def extract_values_from_pdf(pdf_path: str):
                 "SLOTS TBJ"
             ),
     }
-
-
-# =========================================================
-# DARK CHART STYLE
-# =========================================================
-
-def apply_dark_chart_style(chart):
-
-    try:
-
-        chart.graphical_properties = GraphicalProperties(
-            noFill=False,
-            solidFill="1E1E1E"
-        )
-
-    except:
-        pass
 
 
 # =========================================================
@@ -398,7 +383,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
                 size=11
             )
 
-            cell.border = horizontal_border
+            cell.border = body_border
 
     # =====================================================
     # TOTAL ROW
@@ -413,6 +398,8 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         size=11,
         bold=True
     )
+
+    ws[f'A{total_row}'].fill = LIGHT_ORANGE_FILL
 
     ws[f'A{total_row}'].border = total_border
 
@@ -473,8 +460,6 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         bold=True,
         size=16
     )
-
-    dashboard['A1'].fill = DARK_BLUE_FILL
 
     dashboard['A1'].alignment = Alignment(
         horizontal='center'
@@ -588,13 +573,9 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
         pt = DataPoint(idx=i)
 
-        pt.graphicalProperties = GraphicalProperties(
-            solidFill=color
-        )
+        pt.graphicalProperties.solidFill = color
 
         pie.series[0].data_points.append(pt)
-
-    apply_dark_chart_style(pie)
 
     dashboard.add_chart(pie, 'D3')
 
@@ -651,8 +632,6 @@ def process_pdfs_to_excel(pdf_files, output_folder):
 
     s1.graphicalProperties.line.width = 25000
 
-    apply_dark_chart_style(line)
-
     dashboard.add_chart(line, 'D30')
 
     # =====================================================
@@ -696,8 +675,6 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     s1.marker.size = 7
 
     s1.graphicalProperties.line.width = 25000
-
-    apply_dark_chart_style(tips)
 
     dashboard.add_chart(tips, 'D50')
 
@@ -754,8 +731,6 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     for idx, series in enumerate(stacked.series):
 
         series.graphicalProperties.solidFill = stack_colors[idx]
-
-    apply_dark_chart_style(stacked)
 
     dashboard.add_chart(stacked, 'D75')
 
