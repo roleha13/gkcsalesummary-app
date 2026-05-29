@@ -7,7 +7,7 @@ from processor import process_pdfs_to_excel
 st.set_page_config(page_title="Golden Key Casino Sales Analyzer", layout="wide")
 
 st.title("GKC – Sales Analysis Report Generator")
-st.markdown("Upload DAILY RESULTS SUMMARY PDF files to generate the monthly Excel sales report.")
+st.markdown("Upload DAILY RESULTS SUMMARY PDF files to generate the monthly Excel sales report with visuals.")
 
 uploaded_files = st.file_uploader(
     "Upload DAILY RESULTS SUMMARY PDFs",
