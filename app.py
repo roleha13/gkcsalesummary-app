@@ -6,7 +6,7 @@ from processor import process_pdfs_to_excel
 
 st.set_page_config(page_title="Golden Key Casino Sales Analyzer", layout="wide")
 
-st.title("Golden Key Casino – Sales Analysis Builder")
+st.title("GKC – Sales Analysis Report Generator")
 st.markdown("Upload DAILY RESULTS SUMMARY PDF files to generate the monthly Excel sales report.")
 
 uploaded_files = st.file_uploader(
