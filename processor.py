@@ -40,6 +40,11 @@ LIGHT_ORANGE_FILL = PatternFill(
     fill_type="solid"
 )
 
+DARK_BLUE_FILL = PatternFill(
+    fill_type="solid",
+    fgColor="1F1F1F"
+)
+
 thin = Side(style='thin', color='000000')
 thick = Side(style='thick', color='000000')
 double = Side(style='double', color='000000')
