@@ -452,7 +452,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
     dashboard.merge_cells('A1:H1')
 
     dashboard['A1'] = (
-        'GOLDEN KEY CASINO – EXECUTIVE DASHBOARD'
+        'GOLDEN KEY CASINO – DASHBOARD TEMPLATE'
     )
 
     dashboard['A1'].font = Font(
@@ -460,7 +460,8 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         bold=True,
         size=16
     )
-
+    dashboard['A1'].fill = DARK_BLUE_FILL
+    
     dashboard['A1'].alignment = Alignment(
         horizontal='center'
     )
