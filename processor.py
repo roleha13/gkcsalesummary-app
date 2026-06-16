@@ -45,6 +45,14 @@ DARK_BLUE_FILL = PatternFill(
     fgColor="1F1F1F"
 )
 
+TOTAL_WINNINGS_FILL = PatternFill(
+    start_color="F4B183",
+    end_color="F4B183",
+    fill_type="solid"
+)
+
+ws[f'G{i}'].fill = TOTAL_WINNINGS_FILL
+
 thin = Side(style='thin', color='000000')
 thick = Side(style='thick', color='000000')
 double = Side(style='double', color='000000')
@@ -370,7 +378,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         # TOTAL WINNINGS
         ws[f'G{i}'] = f'=SUM(B{i}:F{i})'
         ws[f'G{i}'].number_format = MONEY_FMT
-        ws[f'G{i}'].fill = LIGHT_ORANGE_FILL
+        ws[f'G{i}'].fill = TOTAL_WINNINGS_FILL
 
         # TIPS
         ws[f'H{i}'].number_format = MONEY_FMT
