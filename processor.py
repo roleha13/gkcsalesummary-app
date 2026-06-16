@@ -370,6 +370,7 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         # TOTAL WINNINGS
         ws[f'G{i}'] = f'=SUM(B{i}:F{i})'
         ws[f'G{i}'].number_format = MONEY_FMT
+        ws[f'G{i}'].fill = LIGHT_ORANGE_FILL
 
         # TIPS
         ws[f'H{i}'].number_format = MONEY_FMT
