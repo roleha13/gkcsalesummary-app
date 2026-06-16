@@ -51,8 +51,6 @@ TOTAL_WINNINGS_FILL = PatternFill(
     fill_type="solid"
 )
 
-ws[f'G{i}'].fill = TOTAL_WINNINGS_FILL
-
 thin = Side(style='thin', color='000000')
 thick = Side(style='thick', color='000000')
 double = Side(style='double', color='000000')
