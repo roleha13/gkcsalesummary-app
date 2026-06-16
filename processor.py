@@ -26,7 +26,10 @@ from openpyxl.chart import (
 from openpyxl.chart.label import DataLabelList
 from openpyxl.chart.series import DataPoint
 from openpyxl.chart.axis import ChartLines
+from openpyxl.styles import Font
 
+
+bold_font = Font(name='Arial', size=11, bold=True)
 
 # =========================================================
 # STYLES
@@ -377,6 +380,9 @@ def process_pdfs_to_excel(pdf_files, output_folder):
         ws[f'G{i}'] = f'=SUM(B{i}:F{i})'
         ws[f'G{i}'].number_format = MONEY_FMT
         ws[f'G{i}'].fill = TOTAL_WINNINGS_FILL
+
+        # make only column G bold
+        ws[f'G{i}'].font = bold_font
 
         # TIPS
         ws[f'H{i}'].number_format = MONEY_FMT
